@@ -219,10 +219,13 @@ class RCB4ROSBridge(object):
             auto_start=False)
         self.stretch_server.start()
         self.stretch_publisher = rospy.Publisher(
-            clean_namespace + '/stretch',
-            std_msgs.msg.Int32,
+            clean_namespace
+            + '/kxr_fullbody_controller/stretch',
+            Stretch,
             queue_size=1,
             latch=True)
+        rospy.sleep(0.1)
+        self.publish_stretch()
 
         self.proc_controller_spawner = subprocess.Popen(
             [f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun',
@@ -378,25 +381,41 @@ class RCB4ROSBridge(object):
             rospy.signal_shutdown('Disconnected {}.'.format(e))
         return self.servo_on_off_server.set_succeeded(ServoOnOffResult())
 
+    def publish_stretch(self):
+        # Get current stretch of all servo motors and publish them
+        joint_names = []
+        servo_ids = []
+        for joint_name in self.joint_names:
+            if joint_name not in self.joint_name_to_id:
+                continue
+            joint_names.append(joint_name)
+            servo_ids.append(self.joint_name_to_id[joint_name])
+        stretch = self.interface.read_stretch(servo_ids=servo_ids)
+        stretch_msg = Stretch(
+            joint_names=joint_names,
+            stretch=stretch
+        )
+        self.stretch_publisher.publish(stretch_msg)
+
     def stretch_callback(self, goal):
+        if len(goal.joint_names) == 0:
+            goal.joint_names = self.joint_names
+        joint_names = []
         servo_ids = []
         for joint_name in goal.joint_names:
             if joint_name not in self.joint_name_to_id:
                 continue
+            joint_names.append(joint_name)
             servo_ids.append(self.joint_name_to_id[joint_name])
         # Send new stretch
+        stretch = goal.stretch
         self.interface.send_stretch(
-            value=goal.stretch, servo_ids=servo_ids)
-        # Get current stretch of all servo motors and publish them
-        all_servo_ids = [self.joint_name_to_id[joint_name]
-                         for joint_name in self.joint_names]
-        all_stretch = self.interface.read_stretch(servo_ids=all_servo_ids)
-        stretch_msg = Stretch(
-            joint_names=goal.joint_names,
-            value=all_stretch
-        )
-        self.stretch_publisher.publish(stretch_msg)
+            value=stretch, servo_ids=servo_ids)
         # Return result
+        self.publish_stretch()
+        rospy.loginfo(
+            "Update {} stretch to {}".format(
+                joint_names, stretch))
         return self.stretch_server.set_succeeded(StretchResult())
 
     def publish_imu_message(self):

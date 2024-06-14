@@ -63,7 +63,12 @@ catkin_python_setup()
 
 add_action_files(
   DIRECTORY action
-  FILES ServoOnOff.action
+  FILES ServoOnOff.action Stretch.action
+)
+
+add_message_files(
+  DIRECTORY msg
+  FILES Stretch.msg
 )
 
 generate_messages(

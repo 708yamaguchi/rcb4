@@ -10,6 +10,9 @@ import actionlib
 import geometry_msgs.msg
 from kxr_controller.msg import ServoOnOffAction
 from kxr_controller.msg import ServoOnOffResult
+from kxr_controller.msg import Stretch
+from kxr_controller.msg import StretchAction
+from kxr_controller.msg import StretchResult
 import numpy as np
 import rospy
 import sensor_msgs.msg
@@ -208,6 +211,19 @@ class RCB4ROSBridge(object):
             auto_start=False)
         self.servo_on_off_server.start()
 
+        self.stretch_server = actionlib.SimpleActionServer(
+            clean_namespace
+            + '/kxr_fullbody_controller/stretch_real_interface',
+            StretchAction,
+            execute_cb=self.stretch_callback,
+            auto_start=False)
+        self.stretch_server.start()
+        self.stretch_publisher = rospy.Publisher(
+            clean_namespace + '/stretch',
+            std_msgs.msg.Int32,
+            queue_size=1,
+            latch=True)
+
         self.proc_controller_spawner = subprocess.Popen(
             [f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun',
              'controller_manager', 'spawner']
@@ -361,6 +377,27 @@ class RCB4ROSBridge(object):
             self.unsubscribe()
             rospy.signal_shutdown('Disconnected {}.'.format(e))
         return self.servo_on_off_server.set_succeeded(ServoOnOffResult())
+
+    def stretch_callback(self, goal):
+        servo_ids = []
+        for joint_name in goal.joint_names:
+            if joint_name not in self.joint_name_to_id:
+                continue
+            servo_ids.append(self.joint_name_to_id[joint_name])
+        # Send new stretch
+        self.interface.send_stretch(
+            value=goal.stretch, servo_ids=servo_ids)
+        # Get current stretch of all servo motors and publish them
+        all_servo_ids = [self.joint_name_to_id[joint_name]
+                         for joint_name in self.joint_names]
+        all_stretch = self.interface.read_stretch(servo_ids=all_servo_ids)
+        stretch_msg = Stretch(
+            joint_names=goal.joint_names,
+            value=all_stretch
+        )
+        self.stretch_publisher.publish(stretch_msg)
+        # Return result
+        return self.stretch_server.set_succeeded(StretchResult())
 
     def publish_imu_message(self):
         msg = sensor_msgs.msg.Imu()

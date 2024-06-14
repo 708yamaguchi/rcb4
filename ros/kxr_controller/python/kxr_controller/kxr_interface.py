@@ -1,8 +1,11 @@
 import actionlib
 import actionlib_msgs.msg
 import control_msgs.msg
+import std_msgs.msg
 from kxr_controller.msg import ServoOnOffAction
 from kxr_controller.msg import ServoOnOffGoal
+from kxr_controller.msg import StretchAction
+from kxr_controller.msg import StretchGoal
 import rospy
 from skrobot.interfaces.ros.base import ROSRobotInterfaceBase
 
@@ -25,6 +28,10 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
             namespace + '/kxr_fullbody_controller/servo_on_off',
             ServoOnOffAction)
         self.servo_on_off_client.wait_for_server()
+        self.stretch_client = actionlib.SimpleActionClient(
+            namespace + '/kxr_fullbody_controller/stretch',
+            StretchAction)
+        self.stretch_client.wait_for_server()
 
     def servo_on(self, joint_names=None):
         if joint_names is None:
@@ -52,6 +59,22 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         goal.joint_names = joint_names
         goal.servo_on_states = [False] * len(joint_names)
         client.send_goal(goal)
+
+    def send_stretch(self, value=127, joint_names=None):
+        if joint_names is None:
+            joint_names = self.joint_names
+        goal = StretchGoal()
+        client = self.stretch_client
+        if client.get_state() == actionlib_msgs.msg.GoalStatus.ACTIVE:
+            client.cancel_goal()
+            client.wait_for_result(timeout=rospy.Duration(10))
+        goal.joint_names = joint_names
+        goal.stretch = value
+        client.send_goal(goal)
+
+    def read_stretch():
+        stretch_msg = rospy.wait_for_message(
+            namespace + '/stretch', std_msgs.msg.Int32)
 
     @property
     def fullbody_controller(self):

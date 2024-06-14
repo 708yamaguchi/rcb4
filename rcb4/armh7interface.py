@@ -759,7 +759,7 @@ class ARMH7Interface(object):
 
         Returns
         -------
-        List[int]
+        str
             If b'\x12\x06' (which contains ACK) is returned, command succeed.
             If b'\x12\x15' (which contains NCK) is returned, command fail.
         """

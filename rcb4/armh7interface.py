@@ -1110,9 +1110,8 @@ class ARMH7Interface(object):
         return [self.read_jb_cstruct(idx)
                 for idx in self.id_vector]
 
-    def read_pressure_sensor(self, idx):
-        """
-        Only available when using air_relay board
+    def read_pressure_sensor(self, board_idx):
+        """Returns pressure sensor value of air_relay board.
 
         Equation for calculating pressure value is following
         - v_diff[V]:
@@ -1130,7 +1129,7 @@ class ARMH7Interface(object):
         V_OFFSET = 1.65
         GAIN = 7.4
 
-        all_sensor_data = self.read_jb_cstruct(idx)
+        all_sensor_data = self.read_jb_cstruct(board_idx)
         adc_raw = all_sensor_data.adc[3]
 
         v_amplified = 3.3 * adc_raw / 4095

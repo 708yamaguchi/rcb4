@@ -623,9 +623,14 @@ class ARMH7Interface(object):
         return servo_indices
 
     def search_air_board_ids(self):
+        # air_boards and air_board_ids are in the same order
         air_boards = self.all_air_boards()
-        # TODO: How to decide (id*2) or (id*2+1)
-        return np.array([air_board.id*2+1 for air_board in air_boards])
+        air_board_ids = []
+        for air_board in air_boards:
+            for idx in self.id_vector:
+                if air_board.id == idx // 2:
+                    air_board_ids.append(idx)
+        return np.array(air_board_ids)
 
     def valid_servo_ids(self, servo_ids):
         return np.isfinite(self._servo_id_to_sequentialized_servo_id[

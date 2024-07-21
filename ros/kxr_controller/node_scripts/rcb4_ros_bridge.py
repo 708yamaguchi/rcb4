@@ -13,6 +13,7 @@ from kxr_controller.msg import ServoOnOffAction
 from kxr_controller.msg import ServoOnOffResult
 from kxr_controller.msg import Stretch
 from kxr_controller.msg import StretchAction
+from kxr_controller.msg import StretchResult
 from kxr_controller.msg import PressureControlAction
 from kxr_controller.msg import PressureControlResult
 import numpy as np

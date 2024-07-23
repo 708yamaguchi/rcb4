@@ -44,15 +44,18 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         self.stretch_topic_name = namespace \
             + '/kxr_fullbody_controller/stretch'
         # Pressure control client
-        self.pressure_control_client = actionlib.SimpleActionClient(
-            namespace + '/kxr_fullbody_controller/pressure_control_interface',
-            PressureControlAction)
-        self.enabled_pressure_control = True
-        if not self.pressure_control_client.wait_for_server(timeout):
-            rospy.logerr("PressureControl action server not available.")
-            self.enabled_pressure_control = False
-        self.pressure_topic_name_base = namespace \
-            + '/kxr_fullbody_controller/pressure/'
+        pressure_param = namespace + '/rcb4_ros_bridge/control_pressure'
+        self.control_pressure = rospy.get_param(pressure_param, False)
+        if self.control_pressure is True:
+            self.pressure_control_client = actionlib.SimpleActionClient(
+                namespace + '/kxr_fullbody_controller/pressure_control_interface',
+                PressureControlAction)
+            self.enabled_pressure_control = True
+            if not self.pressure_control_client.wait_for_server(timeout):
+                rospy.logerr("PressureControl action server not available.")
+                self.enabled_pressure_control = False
+            self.pressure_topic_name_base = namespace \
+                + '/kxr_fullbody_controller/pressure/'
 
     def servo_on(self, joint_names=None):
         if joint_names is None:

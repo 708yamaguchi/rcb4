@@ -1169,6 +1169,7 @@ class ARMH7Interface(object):
 
     def stop_pump(self):
         """Stop driving pump. There should be one pump for the entire system.
+
         """
         self.cfunc_call("pump_switch", False)
 

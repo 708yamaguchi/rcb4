@@ -248,15 +248,6 @@ class RCB4ROSBridge(object):
                 self.pressure_control_server.start()
                 self.air_board_ids = self.interface.search_air_board_ids().tolist()
                 self._pressure_publisher_dict = {}
-                for idx in self.air_board_ids:
-                    pub= rospy.Publisher(
-                        clean_namespace
-                        + f'/kxr_fullbody_controller/pressure/{idx}',
-                        std_msgs.msg.Float32,
-                        queue_size=1)
-                    self._pressure_publisher_dict[f'{idx}'] = pub
-                rospy.sleep(0.1)
-                self.publish_pressure()
 
         self.proc_controller_spawner = subprocess.Popen(
             [f'/opt/ros/{os.environ["ROS_DISTRO"]}/bin/rosrun',
@@ -460,8 +451,15 @@ class RCB4ROSBridge(object):
     def publish_pressure(self):
         for idx in self.air_board_ids:
             try:
+                key = f'{idx}'
+                if key not in self._pressure_publisher_dict:
+                    self._pressure_publisher_dict[key] = rospy.Publisher(
+                        self.clean_namespace
+                        + f'/kxr_fullbody_controller/pressure/'+key,
+                        std_msgs.msg.Float32,
+                        queue_size=1)
                 pressure = self.interface.read_pressure_sensor(idx)
-                self._pressure_publisher_dict[f'{idx}'].publish(
+                self._pressure_publisher_dict[key].publish(
                     std_msgs.msg.Float32(data=pressure))
             except serial.serialutil.SerialException as e:
                 rospy.logerr('[publish_pressure] {}'.format(str(e)))

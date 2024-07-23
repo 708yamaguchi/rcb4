@@ -9,13 +9,13 @@ import threading
 
 import actionlib
 import geometry_msgs.msg
+from kxr_controller.msg import PressureControlAction
+from kxr_controller.msg import PressureControlResult
 from kxr_controller.msg import ServoOnOffAction
 from kxr_controller.msg import ServoOnOffResult
 from kxr_controller.msg import Stretch
 from kxr_controller.msg import StretchAction
 from kxr_controller.msg import StretchResult
-from kxr_controller.msg import PressureControlAction
-from kxr_controller.msg import PressureControlResult
 import numpy as np
 import rospy
 import sensor_msgs.msg
@@ -246,7 +246,8 @@ class RCB4ROSBridge(object):
                     execute_cb=self.pressure_control_callback,
                     auto_start=False)
                 self.pressure_control_server.start()
-                self.air_board_ids = self.interface.search_air_board_ids().tolist()
+                self.air_board_ids = self.interface.search_air_board_ids() \
+                                                   .tolist()
                 self._pressure_publisher_dict = {}
 
         self.proc_controller_spawner = subprocess.Popen(
@@ -455,7 +456,7 @@ class RCB4ROSBridge(object):
                 if key not in self._pressure_publisher_dict:
                     self._pressure_publisher_dict[key] = rospy.Publisher(
                         self.clean_namespace
-                        + f'/kxr_fullbody_controller/pressure/'+key,
+                        + '/kxr_fullbody_controller/pressure/'+key,
                         std_msgs.msg.Float32,
                         queue_size=1)
                 pressure = self.interface.read_pressure_sensor(idx)
@@ -511,6 +512,8 @@ class RCB4ROSBridge(object):
             args=(idx, threshold, release,),
             daemon=True)
         self.pressure_control_thread.start()
+        return self.pressure_control_server.set_succeeded(
+            PressureControlResult())
 
     def publish_imu_message(self):
         msg = sensor_msgs.msg.Imu()

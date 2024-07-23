@@ -30,11 +30,11 @@ from rcb4.rcb4interface import RCB4Interface
 from rcb4.rcb4interface import ServoParams
 from rcb4.struct_header import c_vector
 from rcb4.struct_header import DataAddress
+from rcb4.struct_header import GPIOStruct
 from rcb4.struct_header import Madgwick
 from rcb4.struct_header import max_sensor_num
 from rcb4.struct_header import sensor_sidx
 from rcb4.struct_header import SensorbaseStruct
-from rcb4.struct_header import GPIOStruct
 from rcb4.struct_header import ServoStruct
 from rcb4.struct_header import SystemStruct
 from rcb4.struct_header import WormmoduleStruct
@@ -1163,26 +1163,31 @@ class ARMH7Interface(object):
 
     def start_pump(self):
         """Drive pump. There is supposed to be one pump for the entire system.
+
         """
         self.cfunc_call("pump_switch", True)
 
     def stop_pump(self):
         """Stop driving pump. There is supposed to be one pump for the entire system.
+
         """
         self.cfunc_call("pump_switch", False)
 
     def open_air_connect_valve(self):
         """Open valve to release air to atmosphere
+
         """
         self.cfunc_call("valve_switch", True)
 
     def close_air_connect_valve(self):
         """Close valve to shut off air from atmosphere
+
         """
         self.cfunc_call("valve_switch", False)
 
     def gpio_mode(self, board_idx):
         """Return current GPIO mode of air relay board
+
         0b: 1 0 0 1 GPIO3 GPIO2 GPIO1 GPIO0
         """
         all_gpio_data = self.read_gpio_cstruct(board_idx)
@@ -1191,6 +1196,7 @@ class ARMH7Interface(object):
 
     def open_work_valve(self, board_idx):
         """Open work valve
+
         Set GPIO0 to 1
         """
         gpio_mode = self.gpio_mode(board_idx)
@@ -1199,6 +1205,7 @@ class ARMH7Interface(object):
 
     def close_work_valve(self, board_idx):
         """Close work valve
+
         Set GPIO0 to 0
         """
         gpio_mode = self.gpio_mode(board_idx)
@@ -1207,6 +1214,7 @@ class ARMH7Interface(object):
 
     def open_relay_valve(self, board_idx):
         """Open valve to relay air to next work
+
         Set GPIO1 to 1
         """
         gpio_mode = self.gpio_mode(board_idx)
@@ -1215,6 +1223,7 @@ class ARMH7Interface(object):
 
     def close_relay_valve(self, board_idx):
         """Close valve to relay air to next work
+
         Set GPIO1 to 0
         """
         gpio_mode = self.gpio_mode(board_idx)

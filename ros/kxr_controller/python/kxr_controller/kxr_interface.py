@@ -2,13 +2,13 @@ import actionlib
 import actionlib_msgs.msg
 import control_msgs.msg
 import std_msgs.msg
+from kxr_controller.msg import PressureControlAction
+from kxr_controller.msg import PressureControlGoal
 from kxr_controller.msg import ServoOnOffAction
 from kxr_controller.msg import ServoOnOffGoal
 from kxr_controller.msg import Stretch
 from kxr_controller.msg import StretchAction
 from kxr_controller.msg import StretchGoal
-from kxr_controller.msg import PressureControlAction
-from kxr_controller.msg import PressureControlGoal
 import rospy
 from skrobot.interfaces.ros.base import ROSRobotInterfaceBase
 

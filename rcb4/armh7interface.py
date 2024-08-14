@@ -675,8 +675,12 @@ class ARMH7Interface(object):
             Each angle corresponds to the servo ID at the same index
             in servo_ids.
         velocity : int, or array like optional
-            Velocity for the servo movement, clamped between 1 and 255.
-            Default value is 127.
+            Number of frames for the servo movement duration,
+            clamped between 1 and 255. Default value is 127.
+            Converted to time in milliseconds by the following equation:
+                ms = velocity * FRAME_SCALE
+            FRAME_SCALE is 10 by default.
+            (https://github.com/jsk-ros-pkg/control_boards/blob/3440bec59c9229900d410a767edd405da3c8d194/projects/kondoh7/Core/Inc/main.h#L86C24-L86C64)  # NOQA
 
         Raises
         ------

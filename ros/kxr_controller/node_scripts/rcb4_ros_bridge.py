@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 
 import actionlib
 import geometry_msgs.msg
+from kxr_controller.msg import PressureControl
 from kxr_controller.msg import PressureControlAction
 from kxr_controller.msg import PressureControlResult
 from kxr_controller.msg import ServoOnOffAction
@@ -283,8 +284,21 @@ class RCB4ROSBridge(object):
                     execute_cb=self.pressure_control_callback,
                     auto_start=False)
                 self.pressure_control_server.start()
+                # Publish pressure control state like joint_trajectory_controller
+                # https://wiki.ros.org/joint_trajectory_controller#Published_Topics
+                self.pressure_control_pub = rospy.Publisher(
+                    clean_namespace
+                    + '/kxr_fullbody_controller/pressure_control_interface'
+                    + '/state',
+                    PressureControl,
+                    queue_size=1)
                 self.air_board_ids = self.interface.search_air_board_ids() \
                                                    .tolist()
+                self.pressure_control_state = {}
+                for idx in self.air_board_ids:
+                    self.pressure_control_state[f'{idx}'] = {}
+                    self.pressure_control_state[f'{idx}']['threshold'] = None
+                    self.pressure_control_state[f'{idx}']['release'] = None
                 self._pressure_publisher_dict = {}
 
         self.proc_controller_spawner = subprocess.Popen(
@@ -502,7 +516,21 @@ class RCB4ROSBridge(object):
             except serial.serialutil.SerialException as e:
                 rospy.logerr('[publish_pressure] {}'.format(str(e)))
 
+    def publish_pressure_control(self):
+        for idx in list(self.pressure_control_state.keys()):
+            idx = int(idx)
+            msg = PressureControl()
+            msg.board_idx = idx
+            threshold = self.pressure_control_state[f'{idx}']['threshold']
+            release = self.pressure_control_state[f'{idx}']['release']
+            if threshold is not None and release is not None:
+                msg.threshold = threshold
+                msg.release = release
+                self.pressure_control_pub.publish(msg)
+
     def pressure_control_loop(self, idx, threshold, release):
+        self.pressure_control_state[f'{idx}']['threshold'] = threshold
+        self.pressure_control_state[f'{idx}']['release'] = release
         while self.pressure_control_running is True:
             if release is True:
                 self.interface.stop_pump()
@@ -648,6 +676,7 @@ class RCB4ROSBridge(object):
                 self.publish_battery_voltage_value()
             if self.control_pressure:
                 self.publish_pressure()
+                self.publish_pressure_control()
             rate.sleep()
 
 

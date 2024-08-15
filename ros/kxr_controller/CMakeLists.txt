@@ -68,7 +68,7 @@ add_action_files(
 
 add_message_files(
   DIRECTORY msg
-  FILES Stretch.msg
+  FILES PressureControl.msg Stretch.msg
 )
 
 generate_messages(

@@ -543,7 +543,7 @@ class RCB4ROSBridge(object):
                 # Stop valve between pump and valve
                 self.interface.close_work_valve(idx)
                 self.interface.open_air_connect_valve()
-                rospy.sleep(10)  # Wait until air is completely released
+                rospy.sleep(1)  # Wait until air is completely released
                 self.interface.close_air_connect_valve()
                 self.pressure_control_running = False
             else:

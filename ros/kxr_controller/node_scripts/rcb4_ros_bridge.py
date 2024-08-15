@@ -306,8 +306,8 @@ class RCB4ROSBridge(object):
                 self.pressure_control_state = {}
                 for idx in self.air_board_ids:
                     self.pressure_control_state[f'{idx}'] = {}
-                    self.pressure_control_state[f'{idx}']['threshold'] = None
-                    self.pressure_control_state[f'{idx}']['release'] = None
+                    self.pressure_control_state[f'{idx}']['threshold'] = 0
+                    self.pressure_control_state[f'{idx}']['release'] = True
                 self._pressure_publisher_dict = {}
 
         self.proc_controller_spawner = subprocess.Popen(
@@ -530,12 +530,9 @@ class RCB4ROSBridge(object):
             idx = int(idx)
             msg = PressureControl()
             msg.board_idx = idx
-            threshold = self.pressure_control_state[f'{idx}']['threshold']
-            release = self.pressure_control_state[f'{idx}']['release']
-            if threshold is not None and release is not None:
-                msg.threshold = threshold
-                msg.release = release
-                self.pressure_control_pub.publish(msg)
+            msg.threshold = self.pressure_control_state[f'{idx}']['threshold']
+            msg.release = self.pressure_control_state[f'{idx}']['release']
+            self.pressure_control_pub.publish(msg)
 
     def pressure_control_loop(self, idx, threshold, release):
         self.pressure_control_state[f'{idx}']['threshold'] = threshold

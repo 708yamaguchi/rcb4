@@ -14,6 +14,7 @@ import geometry_msgs.msg
 from kxr_controller.msg import PressureControl
 from kxr_controller.msg import PressureControlAction
 from kxr_controller.msg import PressureControlResult
+from kxr_controller.msg import ServoOnOff
 from kxr_controller.msg import ServoOnOffAction
 from kxr_controller.msg import ServoOnOffResult
 from kxr_controller.msg import Stretch
@@ -175,6 +176,14 @@ class RCB4ROSBridge(object):
         self.current_joint_states_pub = rospy.Publisher(
             clean_namespace + '/current_joint_states',
             JointState,
+            queue_size=1)
+        # Publish servo state like joint_trajectory_controller
+        # https://wiki.ros.org/joint_trajectory_controller#Published_Topics
+        self.servo_on_off_pub = rospy.Publisher(
+            clean_namespace
+            + '/kxr_fullbody_controller/servo_on_off_real_interface'
+            + '/state',
+            ServoOnOff,
             queue_size=1)
 
         self.interface = None
@@ -657,6 +666,10 @@ class RCB4ROSBridge(object):
                 msg.name.append(name)
         self.current_joint_states_pub.publish(msg)
 
+    def publish_servo_on_off(self):
+        servo_on_states = list(self.joint_servo_on.values())
+        self.servo_on_off_pub.publish(servo_on_states)
+
     def run(self):
         rate = rospy.Rate(rospy.get_param(
             self.clean_namespace + '/control_loop_rate', 20))
@@ -667,6 +680,7 @@ class RCB4ROSBridge(object):
                 rospy.signal_shutdown('Disconnected.')
                 break
             self.publish_joint_states()
+            self.publish_servo_on_off()
 
             if self.publish_imu and self.imu_publisher.get_num_connections():
                 self.publish_imu_message()

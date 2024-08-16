@@ -303,8 +303,8 @@ class RCB4ROSBridge(object):
                 # publish() to a closed topic'
                 rospy.sleep(0.1)
                 self.pressure_control_server.start()
-                # Publish pressure control state like joint_trajectory_controller
-                # https://wiki.ros.org/joint_trajectory_controller#Published_Topics
+                # Publish state topic like joint_trajectory_controller
+                # https://wiki.ros.org/joint_trajectory_controller#Published_Topics  # NOQA
                 self.pressure_control_pub = rospy.Publisher(
                     clean_namespace
                     + '/kxr_fullbody_controller/pressure_control_interface'

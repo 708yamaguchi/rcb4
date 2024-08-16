@@ -299,6 +299,9 @@ class RCB4ROSBridge(object):
                     PressureControlAction,
                     execute_cb=self.pressure_control_callback,
                     auto_start=False)
+                # Avoid 'rospy.exceptions.ROSException:
+                # publish() to a closed topic'
+                rospy.sleep(0.1)
                 self.pressure_control_server.start()
                 # Publish pressure control state like joint_trajectory_controller
                 # https://wiki.ros.org/joint_trajectory_controller#Published_Topics
@@ -526,6 +529,9 @@ class RCB4ROSBridge(object):
                         + '/kxr_fullbody_controller/pressure/'+key,
                         std_msgs.msg.Float32,
                         queue_size=1)
+                    # Avoid 'rospy.exceptions.ROSException:
+                    # publish() to a closed topic'
+                    rospy.sleep(0.1)
                 pressure = self.interface.read_pressure_sensor(idx)
                 self._pressure_publisher_dict[key].publish(
                     std_msgs.msg.Float32(data=pressure))

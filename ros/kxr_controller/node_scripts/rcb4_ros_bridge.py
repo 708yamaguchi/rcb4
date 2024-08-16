@@ -551,7 +551,7 @@ class RCB4ROSBridge(object):
                 try:
                     pressure = self.interface.read_pressure_sensor(idx)
                 except serial.serialutil.SerialException as e:
-                    rospy.logerr('[publish_pressure] {}'.format(str(e)))
+                    rospy.logerr('[pressure_control_loop] {}'.format(str(e)))
                     continue
                 # Use pump when insufficient pressure reduction
                 if pressure > threshold:

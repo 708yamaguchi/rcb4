@@ -141,11 +141,12 @@
       (format nil "/~A/stretch" controller-name))
     kxr_controller::Stretch))
   (:send-pressure-control
-   (&key board-idx threshold release)
+   (&key board-idx start-pressure stop-pressure release)
    (let* (goal result)
      (setq goal (instance kxr_controller::PressureControlGoal :init))
      (send goal :board_idx board-idx)
-     (send goal :threshold threshold)
+     (send goal :start_pressure start-pressure)
+     (send goal :stop_pressure stop-pressure)
      (send goal :release release)
      (send pressure-control-client :send-goal goal)))
   (:read-pressure

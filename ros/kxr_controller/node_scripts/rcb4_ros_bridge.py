@@ -317,7 +317,8 @@ class RCB4ROSBridge(object):
                 self.pressure_control_state = {}
                 for idx in self.air_board_ids:
                     self.pressure_control_state[f'{idx}'] = {}
-                    self.pressure_control_state[f'{idx}']['threshold'] = 0
+                    self.pressure_control_state[f'{idx}']['start_pressure'] = 0
+                    self.pressure_control_state[f'{idx}']['stop_pressure'] = 0
                     self.pressure_control_state[f'{idx}']['release'] = True
                 self._pressure_publisher_dict = {}
 
@@ -544,12 +545,18 @@ class RCB4ROSBridge(object):
             idx = int(idx)
             msg = PressureControl()
             msg.board_idx = idx
-            msg.threshold = self.pressure_control_state[f'{idx}']['threshold']
+            msg.start_pressure = self.pressure_control_state[
+                f'{idx}']['start_pressure']
+            msg.stop_pressure = self.pressure_control_state[
+                f'{idx}']['stop_pressure']
             msg.release = self.pressure_control_state[f'{idx}']['release']
             self.pressure_control_pub.publish(msg)
 
-    def pressure_control_loop(self, idx, threshold, release):
-        self.pressure_control_state[f'{idx}']['threshold'] = threshold
+    def pressure_control_loop(
+            self, idx, start_pressure, stop_pressure, release):
+        self.pressure_control_state[
+            f'{idx}']['start_pressure'] = start_pressure
+        self.pressure_control_state[f'{idx}']['stop_pressure'] = stop_pressure
         self.pressure_control_state[f'{idx}']['release'] = release
         while self.pressure_control_running is True:
             if release is True:
@@ -559,11 +566,11 @@ class RCB4ROSBridge(object):
                 self.interface.close_air_connect_valve()
                 self.interface.close_work_valve(idx)
                 pressure = self.read_pressure_sensor(idx)
-                if pressure is None or pressure <= threshold:
+                if pressure is None or pressure <= start_pressure:
                     continue
                 # Use pump when insufficient pressure reduction
                 self.start_vacuum(idx)
-                while pressure is None or pressure > threshold:
+                while pressure is None or pressure > stop_pressure:
                     rospy.sleep(1)
                     pressure = self.read_pressure_sensor(idx)
                     if pressure is None:
@@ -615,12 +622,13 @@ class RCB4ROSBridge(object):
                 rospy.sleep(0.1)
         # Set new thread
         idx = goal.board_idx
-        threshold = goal.threshold
+        start_pressure = goal.start_pressure
+        stop_pressure = goal.stop_pressure
         release = goal.release
         self.pressure_control_running = True
         self.pressure_control_thread = threading.Thread(
             target=self.pressure_control_loop,
-            args=(idx, threshold, release,),
+            args=(idx, start_pressure, stop_pressure, release,),
             daemon=True)
         self.pressure_control_thread.start()
         return self.pressure_control_server.set_succeeded(

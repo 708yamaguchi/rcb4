@@ -112,10 +112,12 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         return rospy.wait_for_message(
             self.stretch_topic_name, Stretch)
 
-    def send_pressure_control(self, board_idx, threshold, release):
+    def send_pressure_control(
+            self, board_idx, start_pressure, stop_pressure, release):
         goal = PressureControlGoal(
             board_idx=board_idx,
-            threshold=threshold,
+            start_pressure=start_pressure,
+            stop_pressure=stop_pressure,
             release=release)
         client = self.pressure_control_client
         if client.get_state() == actionlib_msgs.msg.GoalStatus.ACTIVE:

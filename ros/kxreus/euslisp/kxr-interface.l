@@ -43,7 +43,9 @@
    (let* ((namespace (cadr (memq :namespace args)))
           (c-name (cadr (memq :controller-name args)))
           (joint-param (if namespace (format nil "~A/~A/joints" namespace c-name)
-                           (format nil "/~A/joints" c-name))))
+                         (format nil "/~A/joints" c-name)))
+          (pressure-param (if namespace (format nil "~A/rcb4_ros_bridge/control_pressure" namespace)
+                            (format nil "/rcb4_ros_bridge/control_pressure"))))
      (setq controller-name (cadr (memq :controller-name args)))
      (setq joint-names (ros::get-param joint-param nil))
      (while (and (ros::ok) (null joint-names))
@@ -65,7 +67,15 @@
                                     (format nil "/~A/stretch_interface" controller-name))
                                   kxr_controller::StretchAction
                                   :groupname groupname))
-   (dolist (action (list servo-on-off-client stretch-client))
+   (setq control-pressure (ros::get-param pressure-param nil))
+   (when control-pressure
+     (setq pressure-control-client (instance ros::simple-action-client :init
+                                             (if namespace (format nil "/~A/~A/pressure_control_interface" namespace controller-name)
+                                               (format nil "/~A/pressure_control_interface" controller-name))
+                                             kxr_controller::PressureControlAction
+                                             :groupname groupname)))
+   (dolist (action (if control-pressure (list servo-on-off-client stretch-client pressure-control-client)
+                     (list servo-on-off-client stretch-client)))
      (unless (and joint-action-enable (send action :wait-for-server 3))
        (setq joint-action-enable nil)
        (ros::ros-warn "~A is not respond, kxr-interface is disabled" action)
@@ -129,7 +139,21 @@
    (one-shot-subscribe
     (if namespace (format nil "/~A/~A/stretch" namespace controller-name)
       (format nil "/~A/stretch" controller-name))
-    kxr_controller::Stretch)))
+    kxr_controller::Stretch))
+  (:send-pressure-control
+   (&key board-idx threshold release)
+   (let* (goal result)
+     (setq goal (instance kxr_controller::PressureControlGoal :init))
+     (send goal :board_idx board-idx)
+     (send goal :threshold threshold)
+     (send goal :release release)
+     (send pressure-control-client :send-goal goal)))
+  (:read-pressure
+   (&key board-idx)
+   (one-shot-subscribe
+    (if namespace (format nil "/~A/~A/pressure/~A" namespace controller-name board-idx)
+      (format nil "/~A/pressure/~A" controller-name board-idx))
+    std_msgs::Float32)))
 
 
 (defun kxr-init (&key

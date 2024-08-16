@@ -28,6 +28,7 @@ import serial
 from skrobot.model import RobotModel
 from skrobot.utils.urdf import no_mesh_load_mode
 import std_msgs.msg
+import time
 import yaml
 
 from rcb4.armh7interface import ARMH7Interface
@@ -563,20 +564,23 @@ class RCB4ROSBridge(object):
                 self.release_vacuum(idx)
                 self.pressure_control_running = False
             else:
-                self.interface.close_air_connect_valve()
-                self.interface.close_work_valve(idx)
+                start_time = time.time()
                 pressure = self.read_pressure_sensor(idx)
                 if pressure is None or pressure <= start_pressure:
+                    rospy.sleep(0.1)
                     continue
-                # Use pump when insufficient pressure reduction
                 self.start_vacuum(idx)
-                while pressure is None or pressure > stop_pressure:
-                    rospy.sleep(1)
+                while True:
+                    rospy.sleep(0.1)
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time > 1:
+                        break
                     pressure = self.read_pressure_sensor(idx)
                     if pressure is None:
                         continue
-                self.stop_vacuum(idx)
-            rospy.sleep(1)  # pressure control loop rate
+                    if pressure <= stop_pressure:
+                        self.stop_vacuum(idx)
+                        break
 
     def read_pressure_sensor(self, idx):
         try:

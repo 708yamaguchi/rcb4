@@ -553,32 +553,58 @@ class RCB4ROSBridge(object):
         self.pressure_control_state[f'{idx}']['release'] = release
         while self.pressure_control_running is True:
             if release is True:
-                self.interface.stop_pump()
-                # Stop valve between pump and valve
-                self.interface.close_work_valve(idx)
-                self.interface.open_air_connect_valve()
-                rospy.sleep(1)  # Wait until air is completely released
-                self.interface.close_air_connect_valve()
+                self.release_vacuum(idx)
                 self.pressure_control_running = False
             else:
                 self.interface.close_air_connect_valve()
-                try:
-                    pressure = self.interface.read_pressure_sensor(idx)
-                except serial.serialutil.SerialException as e:
-                    rospy.logerr('[pressure_control_loop] {}'.format(str(e)))
+                self.interface.close_work_valve(idx)
+                pressure = self.read_pressure_sensor(idx)
+                if pressure is None or pressure <= threshold:
                     continue
                 # Use pump when insufficient pressure reduction
-                if pressure > threshold:
-                    self.interface.start_pump()
-                    self.interface.open_work_valve(idx)
-                    # Use pump for 1[s].
-                    # This duration depends on vacuum pad size
+                self.start_vacuum(idx)
+                while pressure is None or pressure > threshold:
                     rospy.sleep(1)
-                    self.interface.close_work_valve(idx)
-                    rospy.sleep(0.3)  # Wait for valve to close completely
-                    # Stop pump
-                    self.interface.stop_pump()
+                    pressure = self.read_pressure_sensor(idx)
+                    if pressure is None:
+                        continue
+                self.stop_vacuum(idx)
             rospy.sleep(1)  # pressure control loop rate
+
+    def read_pressure_sensor(self, idx):
+        try:
+            return self.interface.read_pressure_sensor(idx)
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[read_pressure_sensor] {}'.format(str(e)))
+
+    def release_vacuum(self, idx):
+        """Connect work to air.
+
+        After 1s, all valves are closed and pump is stopped.
+        """
+        self.interface.stop_pump()
+        self.interface.open_work_valve(idx)
+        self.interface.open_air_connect_valve()
+        rospy.sleep(1)  # Wait until air is completely released
+        self.interface.close_air_connect_valve()
+        self.interface.close_work_valve(idx)
+
+    def start_vacuum(self, idx):
+        """Vacuum air in work
+
+        """
+        self.interface.start_pump()
+        self.interface.open_work_valve(idx)
+        self.interface.close_air_connect_valve()
+
+    def stop_vacuum(self, idx):
+        """Seal air in work
+
+        """
+        self.interface.close_work_valve(idx)
+        self.interface.close_air_connect_valve()
+        rospy.sleep(0.3)  # Wait for valve to close completely
+        self.interface.stop_pump()
 
     def pressure_control_callback(self, goal):
         if self.pressure_control_thread is not None:

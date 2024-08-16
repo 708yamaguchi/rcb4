@@ -593,29 +593,38 @@ class RCB4ROSBridge(object):
 
         After 1s, all valves are closed and pump is stopped.
         """
-        self.interface.stop_pump()
-        self.interface.open_work_valve(idx)
-        self.interface.open_air_connect_valve()
-        rospy.sleep(1)  # Wait until air is completely released
-        self.interface.close_air_connect_valve()
-        self.interface.close_work_valve(idx)
+        try:
+            self.interface.stop_pump()
+            self.interface.open_work_valve(idx)
+            self.interface.open_air_connect_valve()
+            rospy.sleep(1)  # Wait until air is completely released
+            self.interface.close_air_connect_valve()
+            self.interface.close_work_valve(idx)
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[release_vacuum] {}'.format(str(e)))
 
     def start_vacuum(self, idx):
         """Vacuum air in work
 
         """
-        self.interface.start_pump()
-        self.interface.open_work_valve(idx)
-        self.interface.close_air_connect_valve()
+        try:
+            self.interface.start_pump()
+            self.interface.open_work_valve(idx)
+            self.interface.close_air_connect_valve()
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[start_vacuum] {}'.format(str(e)))
 
     def stop_vacuum(self, idx):
         """Seal air in work
 
         """
-        self.interface.close_work_valve(idx)
-        self.interface.close_air_connect_valve()
-        rospy.sleep(0.3)  # Wait for valve to close completely
-        self.interface.stop_pump()
+        try:
+            self.interface.close_work_valve(idx)
+            self.interface.close_air_connect_valve()
+            rospy.sleep(0.3)  # Wait for valve to close completely
+            self.interface.stop_pump()
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[stop_vacuum] {}'.format(str(e)))
 
     def pressure_control_callback(self, goal):
         if self.pressure_control_thread is not None:

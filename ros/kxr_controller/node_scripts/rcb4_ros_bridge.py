@@ -28,7 +28,6 @@ import serial
 from skrobot.model import RobotModel
 from skrobot.utils.urdf import no_mesh_load_mode
 import std_msgs.msg
-import time
 import yaml
 
 from rcb4.armh7interface import ARMH7Interface
@@ -559,34 +558,31 @@ class RCB4ROSBridge(object):
             f'{idx}']['start_pressure'] = start_pressure
         self.pressure_control_state[f'{idx}']['stop_pressure'] = stop_pressure
         self.pressure_control_state[f'{idx}']['release'] = release
-        while self.pressure_control_running is True:
-            if release is True:
-                self.release_vacuum(idx)
-                self.pressure_control_running = False
-            else:
-                start_time = time.time()
-                pressure = self.read_pressure_sensor(idx)
-                if pressure is None or pressure <= start_pressure:
-                    rospy.sleep(0.1)
-                    continue
+        if self.pressure_control_running is False:
+            return
+        if release is True:
+            self.release_vacuum(idx)
+            self.pressure_control_running = False
+            return
+        vacuum_on = False
+        while self.pressure_control_running:
+            pressure = self.read_pressure_sensor(idx, force=True)
+            if vacuum_on is False and pressure > start_pressure:
                 self.start_vacuum(idx)
-                while True:
-                    rospy.sleep(0.1)
-                    elapsed_time = time.time() - start_time
-                    if elapsed_time > 1:
-                        break
-                    pressure = self.read_pressure_sensor(idx)
-                    if pressure is None:
-                        continue
-                    if pressure <= stop_pressure:
-                        self.stop_vacuum(idx)
-                        break
+                vacuum_on = True
+            if vacuum_on and pressure <= stop_pressure:
+                self.stop_vacuum(idx)
+                vacuum_on = False
+            rospy.sleep(0.1)
 
-    def read_pressure_sensor(self, idx):
-        try:
-            return self.interface.read_pressure_sensor(idx)
-        except serial.serialutil.SerialException as e:
-            rospy.logerr('[read_pressure_sensor] {}'.format(str(e)))
+    def read_pressure_sensor(self, idx, force=False):
+        while True:
+            try:
+                return self.interface.read_pressure_sensor(idx)
+            except serial.serialutil.SerialException as e:
+                rospy.logerr('[read_pressure_sensor] {}'.format(str(e)))
+                if force is True:
+                    continue
 
     def release_vacuum(self, idx):
         """Connect work to air.

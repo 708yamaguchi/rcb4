@@ -210,9 +210,10 @@ class RCB4ROSBridge(object):
         # set servo ids to rosparam
         rospy.set_param(clean_namespace + '/servo_ids',
                         self.interface.search_servo_ids().tolist())
-        # set air board ids to rosparam
-        rospy.set_param(clean_namespace + '/air_board_ids',
-                        self.interface.search_air_board_ids().tolist())
+        if not rospy.get_param('~use_rcb4'):
+            # set air board ids to rosparam
+            rospy.set_param(clean_namespace + '/air_board_ids',
+                            self.interface.search_air_board_ids().tolist())
 
         wheel_servo_sorted_ids = []
         trim_vector_servo_ids = []

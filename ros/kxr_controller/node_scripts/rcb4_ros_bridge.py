@@ -12,6 +12,8 @@ import xml.etree.ElementTree as ET
 
 import actionlib
 import geometry_msgs.msg
+from kxr_controller.msg import AdjustAngleVectorAction
+from kxr_controller.msg import AdjustAngleVectorResult
 from kxr_controller.msg import PressureControl
 from kxr_controller.msg import PressureControlAction
 from kxr_controller.msg import PressureControlResult
@@ -268,6 +270,16 @@ class RCB4ROSBridge(object):
         rospy.sleep(0.1)
         self.servo_on_off_server.start()
 
+        self.adjust_angle_vector_server = actionlib.SimpleActionServer(
+            clean_namespace
+            + '/kxr_fullbody_controller/adjust_angle_vector_interface',
+            AdjustAngleVectorAction,
+            execute_cb=self.adjust_angle_vector_callback,
+            auto_start=False)
+        # Avoid 'rospy.exceptions.ROSException: publish() to a closed topic'
+        rospy.sleep(0.1)
+        self.adjust_angle_vector_server.start()
+
         # TODO(someone) support rcb-4 miniboard
         if not rospy.get_param('~use_rcb4'):
             # Stretch
@@ -483,6 +495,27 @@ class RCB4ROSBridge(object):
         except serial.serialutil.SerialException as e:
             rospy.logerr('[servo_on_off] {}'.format(str(e)))
         return self.servo_on_off_server.set_succeeded(ServoOnOffResult())
+
+    def adjust_angle_vector_callback(self, goal):
+        servo_ids = []
+        error_threshold = []
+        for joint_name, error_threshold in zip(
+                goal.joint_names, goal.error_threshold):
+            if joint_name not in self.joint_name_to_id:
+                continue
+            servo_ids.append(self.joint_name_to_id[joint_name])
+            error_threshold.append(error_threshold)
+        try:
+            self.interface.adjust_angle_vector(
+                servo_ids=servo_ids,
+                error_threshold=np.array(error_threshold, dtype=np.float32))
+        except RuntimeError as e:
+            self.unsubscribe()
+            rospy.signal_shutdown('Disconnected {}.'.format(e))
+        except serial.serialutil.SerialException as e:
+            rospy.logerr('[adjust_angle_vector] {}'.format(str(e)))
+        return self.adjust_angle_vector_server.set_succeeded(
+            AdjustAngleVectorResult())
 
     def publish_stretch(self):
         # Get current stretch of all servo motors and publish them

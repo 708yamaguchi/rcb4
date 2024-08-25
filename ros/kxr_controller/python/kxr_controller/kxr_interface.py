@@ -1,6 +1,9 @@
+import numbers
 import actionlib
 import actionlib_msgs.msg
 import control_msgs.msg
+from kxr_controller.msg import AdjustAngleVectorAction
+from kxr_controller.msg import AdjustAngleVectorGoal
 from kxr_controller.msg import PressureControlAction
 from kxr_controller.msg import PressureControlGoal
 from kxr_controller.msg import ServoOnOffAction
@@ -32,6 +35,12 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
             namespace + '/kxr_fullbody_controller/servo_on_off',
             ServoOnOffAction)
         self.servo_on_off_client.wait_for_server()
+        # Adjust angle vector client
+        self.adjust_angle_vector_client = actionlib.SimpleActionClient(
+            namespace
+            + '/kxr_fullbody_controller/adjust_angle_vector_interface',
+            AdjustAngleVectorAction)
+        self.adjust_angle_vector_client.wait_for_server()
         # Stretch client
         self.stretch_client = actionlib.SimpleActionClient(
             namespace + '/kxr_fullbody_controller/stretch_interface',
@@ -88,6 +97,22 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
             client.wait_for_result(timeout=rospy.Duration(10))
         goal.joint_names = joint_names
         goal.servo_on_states = [False] * len(joint_names)
+        client.send_goal(goal)
+
+    def adjust_angle_vector(
+            self, joint_names=None, error_threshold=5*(3.14/180)):
+        if joint_names is None:
+            joint_names = self.joint_names
+        goal = AdjustAngleVectorGoal()
+        client = self.adjust_angle_vector_client
+        if client.get_state() == actionlib_msgs.msg.GoalStatus.ACTIVE:
+            client.cancel_goal()
+            client.wait_for_result(timeout=rospy.Duration(10))
+        goal.joint_names = joint_names
+        if isinstance(error_threshold, numbers.Number):
+            error_threshold = [
+                error_threshold for _ in range(len(joint_names))]
+        goal.error_threshold = error_threshold
         client.send_goal(goal)
 
     def send_stretch(self, value=127, joint_names=None):

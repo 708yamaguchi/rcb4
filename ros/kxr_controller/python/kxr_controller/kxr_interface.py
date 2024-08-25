@@ -1,4 +1,7 @@
 import numbers
+import numpy as np
+import time
+
 import actionlib
 import actionlib_msgs.msg
 import control_msgs.msg
@@ -100,7 +103,7 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
         client.send_goal(goal)
 
     def adjust_angle_vector(
-            self, joint_names=None, error_threshold=5*(3.14/180)):
+            self, joint_names=None, error_threshold=np.deg2rad(5)):
         if joint_names is None:
             joint_names = self.joint_names
         goal = AdjustAngleVectorGoal()
@@ -114,6 +117,33 @@ class KXRROSRobotInterface(ROSRobotInterfaceBase):
                 error_threshold for _ in range(len(joint_names))]
         goal.error_threshold = error_threshold
         client.send_goal(goal)
+
+    def wait_interpolation(
+            self, *args,
+            timeout=0,
+            adjust_angle_vector=False,
+            joint_names=None,
+            error_threshold=np.deg2rad(5),
+            **kwargs):
+        if adjust_angle_vector is False:
+            return super(KXRROSRobotInterface, self).wait_interpolation(
+                *args, timeout=timeout, **kwargs)
+        if timeout == 0:
+            timeout = float('inf')
+        start_time = time.time()
+        # When all controllers finish interpolation or timeout,
+        # return from this function
+        while True:
+            self.adjust_angle_vector(
+                joint_names=joint_names,
+                error_threshold=error_threshold)
+            is_interpolating_list = super(
+                KXRROSRobotInterface, self).wait_interpolation(
+                    *args, timeout=0.1, **kwargs)
+            is_interpolating = any(is_interpolating_list)
+            elapsed_time = time.time() - start_time
+            if is_interpolating is False or elapsed_time > timeout:
+                return is_interpolating_list
 
     def send_stretch(self, value=127, joint_names=None):
         if not self.enabled_stretch:
